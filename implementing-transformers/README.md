@@ -19,10 +19,8 @@ Every notebook is a standalone implementation of a single transformer-based arch
 ### 4. LLaMA 2 (coming Fri Feb 16)
 
 - **Notebook**: `XX_LLaMA_2.ipynb`
-- **Overview**: LLaMA 2 and its breakthrough components, such as RMSNorm, Rotary Positional Embeddings, MQA. Unlike the original code, my implementaiton does not rely on `fairscale` to optimize the model for distributed workloads.
+- **Overview**: LLaMA 2 and its breakthrough components, such as RMSNorm, Rotary Positional Embeddings, MQA. Unlike the original code, my implementation does not rely on `fairscale` to optimize the model for distributed workloads.
 
 ## Getting Started
-
-To make the most out of this repository, I recommend:
 
 1. **Prerequisites**: Python, Deep Learning Fundamentals, PyTorch fundamentals. I recommend this free course https://www.udacity.com/course/deep-learning-pytorch--ud188 (at least lessons 1 through 4) to learn deep learning and pytorch fundamentals. 
