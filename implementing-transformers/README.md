@@ -1,4 +1,4 @@
-# Transformer-Based Models Implementations
+# Transformer-Based Model Implementations
 
 Welcome to this project where I dive deep into the architecture of transformer-based models through a series of Jupyter notebooks with implementations in PyTorch. In order to completely understand transformer architectures, I spent a lot of time trying to learn the fundamentals of deep learning, pytorch, and attention from a lot of different resources. Eventually, I just started trying to code them. And I must say it is perhaps the most underrated tool for understanding. Turns out Andrej Karpathy discovered the same thing for himself many years ago (guess I should have just read his blog first). Whether you are just visiting, eager to learn, or a recruiter/hiring manager I've shared this project with, I encourage you to check back weekly for new implementations.
 
