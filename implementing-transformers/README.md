@@ -16,7 +16,7 @@ Every notebook is a standalone implementation of a single transformer-based arch
 - **Notebook**: `02_Original_Transformer.ipynb`
 - **Overview**: The encoder-decoder structure of the original transformer from Attention is All You Need.
 
-### 4. LLaMA 2 (coming Fri Feb 16)
+### 4. LLaMA 2 (coming Fri Feb 23)
 
 - **Notebook**: `XX_LLaMA_2.ipynb`
 - **Overview**: LLaMA 2 and its breakthrough components, such as RMSNorm, Rotary Positional Embeddings, MQA. Unlike the original code, my implementation does not rely on `fairscale` to optimize the model for distributed workloads.
