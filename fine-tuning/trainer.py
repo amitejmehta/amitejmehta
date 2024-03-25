@@ -1,3 +1,8 @@
+from dataclasses import dataclass
+import torch
+from peft import get_peft_model
+
+
 @dataclass
 class TrainingArgs():
     num_epochs: int = 1
