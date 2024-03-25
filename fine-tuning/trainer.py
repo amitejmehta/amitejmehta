@@ -1,6 +1,7 @@
 from dataclasses import dataclass
 import torch
-from peft import get_peft_model
+from peft import LoraConfig, get_peft_model
+from accelerate import Accelerator
 
 
 @dataclass
@@ -35,7 +36,7 @@ class Trainer():
             self.model = get_peft_model(model, training_args.lora_config)
 
         # optimizer
-        self.optimizer = AdamW(
+        self.optimizer = torch.optim.AdamW(
             model.parameters(), lr=training_args.learning_rate)
 
         # learning rate scheduler
