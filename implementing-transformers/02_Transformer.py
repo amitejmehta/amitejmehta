@@ -19,6 +19,16 @@ class ModelArgs:
 
 
 
+class Embeddings(nn.Module):
+    def __init__(self, args:ModelArgs):
+        super().__init__()
+        self.embedding = nn.Embedding(args.vocab_size, args.d_model)
+        self.d_model = args.d_model
+    
+    def forward(self, x):
+        return self.embedding(x)*self.d_model**0.5
+
+
 class PositionalEncoding(nn.Module):
     def __init__(self, args: ModelArgs):
         super().__init__()

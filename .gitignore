@@ -3,3 +3,4 @@ deep-learning-v2-pytorch/
 node_modules
 momentary/
 fine-tuning/trainer.ipynb
+models/
