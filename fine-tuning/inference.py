@@ -61,13 +61,16 @@ def top_k_sampling(probabilities, k=10):
     next_token_id = torch.multinomial(top_k_probs, num_samples=1)
 
     next_token_id = top_k_ids.gather(
-        dim=-1, index=next_token_id).item()
+        dim=-1, index=next_token_id)
 
-    return next_token_id
+    return next_token_id.flatten()
 
 
 def top_p_sampling(probabilities, p=0.8):
     sorted_probs, sorted_ids = torch.sort(probabilities, descending=True)
+
+    if sorted_probs[0][0] > p:
+        return sorted_ids[0][0]
 
     cum_sum = torch.cumsum(sorted_probs, dim=-1)
 
@@ -77,15 +80,13 @@ def top_p_sampling(probabilities, p=0.8):
     # print(top_p_ids.shape)
     top_p_probs = cum_sum[top_p_indices]
     top_p_probs = top_p_probs / torch.sum(top_p_probs)
-    # print(top_p_probs)
 
-    next_token_id = torch.multinomial(top_p_probs, num_samples=1)
-    # print(next_token_id)
+    next_token_idx = torch.multinomial(top_p_probs, num_samples=1)
 
     next_token_id = top_p_ids.gather(
-        dim=-1, index=next_token_id).item()
+        dim=-1, index=next_token_idx)
 
-    return next_token_id
+    return next_token_id.flatten()
 
 
 def generate_token_w_caching(inputs, model, sampling="greedy", temperature=1.0, k=10, p=0.8):
@@ -135,13 +136,13 @@ def generate_no_caching(inputs, model, tokenizer, max_tokens, sampling="greedy")
     return generated_text
 
 
-def generate_one_sequence(input, model, tokenizer, max_tokens, sampling="greedy"):
+def generate_one_sequence(input, model, tokenizer, max_tokens, sampling="greedy", temperature=1.0, k=10, p=0.8):
     generated_token_ids = []
     next_inputs = input
 
     for _ in range(max_tokens):
         next_token_id, past_key_values = generate_token_w_caching(
-            next_inputs, model, sampling)
+            next_inputs, model, sampling, temperature, k, p)
         next_inputs = {
             "input_ids": next_token_id.reshape(1, 1),
             "attention_mask": torch.cat([next_inputs['attention_mask'], torch.tensor([[1]])], dim=1),
