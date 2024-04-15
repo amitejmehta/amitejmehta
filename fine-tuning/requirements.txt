@@ -10,3 +10,4 @@ openai==1.5.0
 accelerate==0.27.0
 lorax-client==0.3.2
 peft==0.10.0
+streamlit==1.33.0
