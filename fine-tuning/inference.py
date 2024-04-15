@@ -2,54 +2,6 @@ import torch
 import torch.nn.functional as F
 
 
-def get_last_token_logits(inputs, model):
-    with torch.no_grad():
-        outputs = model(**inputs)
-    logits = outputs.logits
-
-    # 0: for the first sequence in the batch, -1 for the last token in that sequence, : to extract all the possible logits
-    last_token_logits = logits[0, -1, :]
-
-
-def get_top_k(input, model, tokenizer, sampling, k, i=0, temperature=1.0):
-
-    for _ in range(i):
-        next_token_id, past_key_values = generate_token_w_caching(
-            input, model, sampling)
-        input = {
-            "input_ids": next_token_id.reshape(1, 1),
-            "attention_mask": torch.cat([input['attention_mask'], torch.tensor([[1]])], dim=1),
-            "past_key_values": past_key_values
-        }
-
-    with torch.no_grad():
-        outputs = model(**input)
-    logits = outputs.logits
-
-    # 0: for the first sequence in the batch, -1 for the last token in that sequence, : to extract all the possible logits
-    last_token_logits = logits[0, -1, :]
-    last_token_logits = last_token_logits/temperature
-    probabilities = F.softmax(last_token_logits, dim=-1)
-    top_k = torch.topk(last_token_logits, k=k)
-    top_k_tokens = [tokenizer.decode(i) for i in top_k.indices]
-    top_k_probabilities = [probabilities[i] for i in top_k.indices]
-    return top_k_tokens, top_k_probabilities
-
-
-def generate_token(inputs, model, sampling="greedy"):
-    with torch.no_grad():
-        outputs = model(**inputs)
-    logits = outputs.logits
-
-    # 0: for the first sequence in the batch, -1 for the last token in that sequence, : to extract all the possible logits
-    last_token_logits = logits[0, -1, :]
-
-    if sampling == "greedy":
-        next_token_id = last_token_logits.argmax()
-
-    return next_token_id
-
-
 def greedy_sampling(logits):
     return logits.argmax(dim=-1)
 
@@ -76,8 +28,6 @@ def top_p_sampling(probabilities, p=0.8):
 
     top_p_indices = cum_sum <= p
     top_p_ids = sorted_ids[top_p_indices]
-    # print(top_p_ids)
-    # print(top_p_ids.shape)
     top_p_probs = cum_sum[top_p_indices]
     top_p_probs = top_p_probs / torch.sum(top_p_probs)
 
@@ -89,19 +39,17 @@ def top_p_sampling(probabilities, p=0.8):
     return next_token_id.flatten()
 
 
-def generate_token_w_caching(inputs, model, sampling="greedy", temperature=1.0, k=10, p=0.8):
+def generate_token(inputs, model, caching=True, sampling="greedy", temperature=1.0, k=10, p=0.8):
     with torch.no_grad():
         outputs = model(**inputs)
     logits = outputs.logits
 
     # 0: for the first sequence in the batch, -1 for the last token in that sequence, : to extract all the possible logits
     # last_token_logits = logits[0, -1, :]
-
     # : for all seqeunces in the batch, -1 for the last token, : for all possible logits
     last_token_logits = logits[:, -1, :]
 
     if sampling == "greedy":
-
         # for a single sequence in the batch
         # next_token_id = last_token_logits.argmax()
 
@@ -118,43 +66,74 @@ def generate_token_w_caching(inputs, model, sampling="greedy", temperature=1.0, 
     if sampling == "top_p":
         next_token_id = top_p_sampling(probabilities, p=p)
 
-    return next_token_id, outputs.past_key_values
+    if caching:
+        return next_token_id, outputs.past_key_values
+
+    return next_token_id
 
 
-def generate_no_caching(inputs, model, tokenizer, max_tokens, sampling="greedy"):
-    generated_token_ids = []
-    next_inputs = inputs
-    for _ in range(max_tokens):
-        next_token_id = generate_token(next_inputs, model, sampling)
-        next_inputs = {
-            "input_ids": torch.cat([next_inputs['input_ids'], next_token_id.reshape(1, 1)], dim=1),
-            "attention_mask": torch.cat([next_inputs['attention_mask'], torch.tensor([[1]])], dim=1)
+def get_top_k(input, model, tokenizer, sampling, k=10, i=0, temperature=1.0):
+
+    for _ in range(i):
+        next_token_id, past_key_values = generate_token(
+            input, model, sampling, temperature=temperature, k=k)
+        input = {
+            "input_ids": next_token_id.reshape(1, 1),
+            "attention_mask": torch.cat([input['attention_mask'], torch.tensor([[1]])], dim=1),
+            "past_key_values": past_key_values
         }
 
-        generated_token_ids.append(next_token_id)
-    generated_text = tokenizer.decode(generated_token_ids)
-    return generated_text
+    with torch.no_grad():
+        outputs = model(**input)
+    logits = outputs.logits
+
+    # 0: for the first sequence in the batch, -1 for the last token in that sequence, : to extract all the possible logits
+    last_token_logits = logits[0, -1, :]
+    last_token_logits = last_token_logits/temperature
+    probabilities = F.softmax(last_token_logits, dim=-1)
+    top_k = torch.topk(last_token_logits, k=k)
+    top_k_tokens = [tokenizer.decode(i) for i in top_k.indices]
+    top_k_probabilities = [probabilities[i] for i in top_k.indices]
+    return top_k_tokens, top_k_probabilities
 
 
-def generate_one_sequence(input, model, tokenizer, max_tokens, sampling="greedy", temperature=1.0, k=10, p=0.8):
+def generate_one_sequence(input, model, tokenizer, max_tokens, caching=True, sampling="greedy", temperature=1.0, k=10, p=0.8):
     generated_token_ids = []
     next_inputs = input
 
     for _ in range(max_tokens):
-        next_token_id, past_key_values = generate_token_w_caching(
-            next_inputs, model, sampling, temperature, k, p)
-        next_inputs = {
-            "input_ids": next_token_id.reshape(1, 1),
-            "attention_mask": torch.cat([next_inputs['attention_mask'], torch.tensor([[1]])], dim=1),
-            "past_key_values": past_key_values
-        }
+        if caching:
+            next_token_id, past_key_values = generate_token(
+                next_inputs, model,
+                sampling=sampling,
+                temperature=temperature,
+                k=k,
+                p=p)
+            next_inputs = {
+                "input_ids": next_token_id.reshape(1, 1),
+                "attention_mask": torch.cat([next_inputs['attention_mask'], torch.tensor([[1]])], dim=1),
+                "past_key_values": past_key_values
+            }
+        else:
+            next_token_id = generate_token(
+                next_inputs,
+                model,
+                caching=False,
+                sampling=sampling,
+                temperature=temperature,
+                k=k,
+                p=p)
+            next_inputs = {
+                "input_ids": torch.cat([next_inputs['input_ids'], next_token_id.reshape(1, 1)], dim=1),
+                "attention_mask": torch.cat([next_inputs['attention_mask'], torch.tensor([[1]])], dim=1),
+            }
         generated_token_ids.append(next_token_id)
 
     generated_tokens = tokenizer.batch_decode(generated_token_ids)
     return generated_tokens
 
 
-def generate(inputs, model, tokenizer, max_tokens, sampling="greedy"):
+def generate(inputs, model, tokenizer, max_tokens, sampling="greedy", temperature=1.0, k=10):
     generated_token_ids = [[] for _ in range(inputs['input_ids'].shape[0])]
 
     attention_mask = inputs['attention_mask']
@@ -166,8 +145,9 @@ def generate(inputs, model, tokenizer, max_tokens, sampling="greedy"):
     }
 
     for _ in range(max_tokens):
-        next_token_ids, past_key_values = generate_token_w_caching(
-            next_inputs, model, sampling)
+        next_token_ids, past_key_values = generate_token(
+            next_inputs, model, sampling, temperature=temperature, k=k
+        )
 
         next_inputs = {
             "input_ids": next_token_ids.reshape(-1, 1),
