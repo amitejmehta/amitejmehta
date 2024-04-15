@@ -72,11 +72,11 @@ def generate_token(inputs, model, caching=True, sampling="greedy", temperature=1
     return next_token_id
 
 
-def get_top_k(input, model, tokenizer, sampling, k=10, i=0, temperature=1.0):
+def get_top_k(input, model, tokenizer, sampling='greedy', i=0, k=10, temperature=1.0):
 
     for _ in range(i):
         next_token_id, past_key_values = generate_token(
-            input, model, sampling, temperature=temperature, k=k)
+            input, model, sampling=sampling, temperature=temperature, k=k)
         input = {
             "input_ids": next_token_id.reshape(1, 1),
             "attention_mask": torch.cat([input['attention_mask'], torch.tensor([[1]])], dim=1),
