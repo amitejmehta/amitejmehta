@@ -20,23 +20,31 @@ def top_k_sampling(probabilities, k=10):
 
 def top_p_sampling(probabilities, p=0.8):
     sorted_probs, sorted_ids = torch.sort(probabilities, descending=True)
-
-    if sorted_probs[0][0] > p:
-        return sorted_ids[0][0]
+    print(sorted_probs.shape)
 
     cum_sum = torch.cumsum(sorted_probs, dim=-1)
+    top_p_idx = cum_sum <= p
 
-    top_p_indices = cum_sum <= p
-    top_p_ids = sorted_ids[top_p_indices]
-    top_p_probs = cum_sum[top_p_indices]
-    top_p_probs = top_p_probs / torch.sum(top_p_probs)
+    mask_idx = cum_sum.sum(dim=-1).unsqueeze(-1) - 1
+    mask_idx = mask_idx.long()
+    masked_probs = top_p_idx.scatter_(-1, mask_idx, 1)
+
+    top_p_ids = sorted_ids[masked_probs]
+    top_p_probs = sorted_probs[masked_probs]
+
+    if top_p_probs.ndim == 1:
+        top_p_probs = top_p_probs.unsqueeze(0)
+        top_p_ids = top_p_ids.unsqueeze(0)
+
+    top_p_probs = top_p_probs / torch.sum(top_p_probs, dim=-1)
 
     next_token_idx = torch.multinomial(top_p_probs, num_samples=1)
 
     next_token_id = top_p_ids.gather(
         dim=-1, index=next_token_idx)
+    print(next_token_id)
 
-    return next_token_id.flatten()
+    return next_token_id
 
 
 def generate_token(inputs, model, caching=True, sampling="greedy", temperature=1.0, k=10, p=0.8):
@@ -55,24 +63,24 @@ def generate_token(inputs, model, caching=True, sampling="greedy", temperature=1
 
         # for batched, we set dimension=-1 to take argmax over the column (possible logits)
         # rather than from the rows (sequences in the batch)
-        next_token_id = greedy_sampling(last_token_logits)
+        next_token_ids = greedy_sampling(last_token_logits)
 
     last_token_logits = last_token_logits/temperature
     probabilities = F.softmax(last_token_logits, dim=-1)
 
     if sampling == "top_k":
-        next_token_id = top_k_sampling(probabilities, k=k)
+        next_token_ids = top_k_sampling(probabilities, k=k)
 
     if sampling == "top_p":
-        next_token_id = top_p_sampling(probabilities, p=p)
+        next_token_ids = top_p_sampling(probabilities, p=p)
 
     if caching:
-        return next_token_id, outputs.past_key_values
+        return next_token_ids, outputs.past_key_values
 
-    return next_token_id
+    return next_token_ids
 
 
-def get_top_k(input, model, tokenizer, sampling='greedy', i=0, k=10, temperature=1.0):
+def get_top_k(input, model, tokenizer, sampling='greedy', i=0, k=10, temperature=1.0, p=0.2):
 
     for _ in range(i):
         next_token_id, past_key_values = generate_token(
@@ -110,7 +118,7 @@ def generate_one_sequence(input, model, tokenizer, max_tokens, caching=True, sam
                 k=k,
                 p=p)
             next_inputs = {
-                "input_ids": next_token_id.reshape(1, 1),
+                "input_ids": next_token_id.reshape(-1, 1),
                 "attention_mask": torch.cat([next_inputs['attention_mask'], torch.tensor([[1]])], dim=1),
                 "past_key_values": past_key_values
             }
@@ -129,11 +137,12 @@ def generate_one_sequence(input, model, tokenizer, max_tokens, caching=True, sam
             }
         generated_token_ids.append(next_token_id)
 
+    # we use batch_decode because generate_token's first dimension is batch_size
     generated_tokens = tokenizer.batch_decode(generated_token_ids)
     return generated_tokens
 
 
-def generate(inputs, model, tokenizer, max_tokens, sampling="greedy", temperature=1.0, k=10):
+def generate(inputs, model, tokenizer, max_tokens, sampling="greedy", temperature=1.0, k=10, p=0.2):
     generated_token_ids = [[] for _ in range(inputs['input_ids'].shape[0])]
 
     attention_mask = inputs['attention_mask']
@@ -146,7 +155,7 @@ def generate(inputs, model, tokenizer, max_tokens, sampling="greedy", temperatur
 
     for _ in range(max_tokens):
         next_token_ids, past_key_values = generate_token(
-            next_inputs, model, sampling, temperature=temperature, k=k
+            next_inputs, model, sampling=sampling, temperature=temperature, k=k, p=0.2
         )
 
         next_inputs = {
