@@ -1,3 +1,0 @@
-[submodule "token-distribution-viz"]
-	path = token-distribution-viz
-	url = https://huggingface.co/spaces/amitej-mehta/token-distribution-viz
