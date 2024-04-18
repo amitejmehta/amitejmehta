@@ -47,7 +47,13 @@ def top_p_sampling(probabilities, p=0.8):
     return next_token_id
 
 
-def generate_token(inputs, model, caching=True, sampling="greedy", temperature=1.0, k=10, p=0.8):
+def beam_search(probabilities, beam_width=2):
+    top_probs, top_ids = torch.topk(probabilities, k=beam_width)
+    print(top_ids.shape)
+    return top_ids, top_probs
+
+
+def generate_token(inputs, model, caching=True, sampling="greedy", temperature=1.0, k=10, p=0.8, beam_width=2):
     with torch.no_grad():
         outputs = model(**inputs)
     logits = outputs.logits
@@ -73,6 +79,14 @@ def generate_token(inputs, model, caching=True, sampling="greedy", temperature=1
 
     if sampling == "top_p":
         next_token_ids = top_p_sampling(probabilities, p=p)
+
+    if sampling == "beam_search":
+        next_token_ids, probabilities = beam_search(
+            probabilities, beam_width=beam_width)
+        if caching:
+            return next_token_ids, probabilities, outputs.past_key_values
+        else:
+            return next_token_ids, probabilities
 
     if caching:
         return next_token_ids, outputs.past_key_values
@@ -157,6 +171,45 @@ def generate(inputs, model, tokenizer, max_tokens, sampling="greedy", temperatur
         next_token_ids, past_key_values = generate_token(
             next_inputs, model, sampling=sampling, temperature=temperature, k=k, p=0.2
         )
+
+        next_inputs = {
+            "input_ids": next_token_ids.reshape(-1, 1),
+            "attention_mask": torch.cat([
+                next_inputs["attention_mask"],
+                torch.ones((next_token_ids.shape[0], 1)),
+            ], dim=1),
+            "position_ids": next_inputs["position_ids"][:, -1].unsqueeze(-1) + 1,
+            "past_key_values": past_key_values
+        }
+
+        [seq.append(next_token_ids[i])
+         for i, seq in enumerate(generated_token_ids)]
+
+    generated_tokens = tokenizer.batch_decode(
+        generated_token_ids)
+
+    return ["".join(tokens) for tokens in generated_tokens]
+
+
+def generate(inputs, model, tokenizer, max_tokens, sampling="greedy", temperature=1.0, k=10, p=0.2, beam_width=2):
+    generated_token_ids = [[] for _ in range(inputs['input_ids'].shape[0])]
+
+    attention_mask = inputs['attention_mask']
+    position_ids = attention_mask.long().cumsum(-1) - 1
+    position_ids.masked_fill_(attention_mask == 0, 1)
+    next_inputs = {
+        "position_ids": position_ids,
+        **inputs
+    }
+
+    next_token_ids, probs, past_key_values = generate_token(
+        next_inputs, model, sampling=sampling, temperature=temperature, k=k, p=0.2, beam_width=beam_width)
+    for i in range(1, max_tokens):
+        beams = [[] for _ in range(beam_width)]
+        for j in range(beam_width):
+            next_token_ids[:, j], probs[:, j], past_key_values = generate_token(
+                next_inputs[:, j], model, sampling=sampling, temperature=temperature, k=k, p=0.2, beam_width=beam_width)
+            beams.append((next_token_ids, probs, past_key_values))
 
         next_inputs = {
             "input_ids": next_token_ids.reshape(-1, 1),
