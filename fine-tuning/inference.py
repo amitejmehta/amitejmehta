@@ -191,7 +191,7 @@ def generate(inputs, model, tokenizer, max_tokens, sampling="greedy", temperatur
     return ["".join(tokens) for tokens in generated_tokens]
 
 
-def generate(inputs, model, tokenizer, max_tokens, sampling="greedy", temperature=1.0, k=10, p=0.2, beam_width=2):
+def gen_w_beam_search(inputs, model, tokenizer, max_tokens, sampling="greedy", temperature=1.0, k=10, p=0.2, beam_width=2):
     generated_token_ids = [[] for _ in range(inputs['input_ids'].shape[0])]
 
     attention_mask = inputs['attention_mask']
