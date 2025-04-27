@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>URLBlocklist</key>
+  <array>
+    <string>https://www.youtube.com/</string>
+    <string>youtube.com</string>
+    <string>https://www.tiktok.com/</string>
+    <string>tiktok.com</string>
+    <string>https://www.twitter.com</string>
+    <string>twitter.com</string>
+    <string>https://www.instagram.com</string>
+    <string>instagram.com</string>
+  </array>
+</dict>
+</plist>

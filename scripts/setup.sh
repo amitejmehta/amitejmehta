@@ -27,9 +27,8 @@ repo() {
     cd ~/$1
 }
 
-alias newvenv="virtualenv .venv -p python3.12 && source .venv/bin/activate"
+alias blocklist="~/amitejmehta/scripts/manage_chrome_blocklist.sh"
 alias activate="source .venv/bin/activate"
-alias pipdev="pip install -e . --no-cache-dir"
 # === END AMI UTILITY FUNCTIONS ==='
 
 # Check if the functions are already in the file
