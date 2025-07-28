@@ -119,7 +119,7 @@ def parse_signature(func: Callable) -> dict:
     signature = inspect.signature(func)
     parameters, required = {}, []
     for param in signature.parameters.values():
-        if param.annotation is None:
+        if param.annotation is inspect._empty:
             raise ValueError(f"Tool {func.__name__} must have type hints")
 
         if param.name == "wrapper":
