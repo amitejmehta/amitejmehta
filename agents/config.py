@@ -1,15 +1,10 @@
-# avarra_agents/config.py
-# This module handles configuration for the avarra_agents package including secrets, logging, and runtime environment.
-
-from pathlib import Path
-from typing import Literal
-
-from pydantic import Field
 from pydantic_settings import BaseSettings
 from rich.console import Console
 
 
 class RichLogger(Console):
+    """RichLogger extends the Rich Console class to provide a logger interface."""
+
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self._styles = {
@@ -27,24 +22,18 @@ class RichLogger(Console):
 
 
 class AgentSettings(BaseSettings):
-    prompt_dir: Path = Field(default=Path("agents/prompts"))
-    log_format: Literal["rich", "loguru"] = Field(default="loguru", alias="LOG_FORMAT")
-
-    def configure_tracer(self):
-        import logfire
-
-        logfire.configure(scrubbing=False)
-        logfire.instrument_anthropic()
+    @property
+    def runtime_env(self):
+        """Update this to be conditional based on your dev env's."""
+        return "local"
 
     def get_logger(self):
-        if self.log_format == "loguru":
+        if self.runtime_env == "local":
+            return RichLogger()
+        else:
             from loguru import logger
 
             return logger
-        elif self.log_format == "rich":
-            return RichLogger()
-        else:
-            raise ValueError(f"Invalid log format: {self.log_format}")
 
 
 settings = AgentSettings()

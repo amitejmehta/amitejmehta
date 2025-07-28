@@ -28,7 +28,7 @@ async def user_input(llm: LLM) -> AsyncIterator[List[Dict[str, str]]]:
         yield [{"type": "text", "text": x}]
 
 
-async def main(llm: LLM) -> None:
+async def chat(llm: LLM) -> None:
     try:
         intro = f"model: [magenta]{llm._model}[/magenta]\n\ntools:\n{'\n\n'.join(f'- [cyan bold]{fn.__name__}[/cyan bold]: {fn.__doc__}' for fn in llm._tool_dict.values())}\n\nType [bold red]'CTRL+C'[/bold red] to end the conversation.\nType [bold yellow]'clear'[/bold yellow] to clear the message history.\n\n"
         logger.info(intro)
@@ -40,4 +40,4 @@ async def main(llm: LLM) -> None:
 
 
 if __name__ == "__main__":
-    asyncio.run(main(LLM(tools=[read_file, edit_file, execute_bash])))
+    asyncio.run(chat(LLM(tools=[read_file, edit_file, execute_bash])))
