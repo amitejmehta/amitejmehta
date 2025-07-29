@@ -1,12 +1,13 @@
 import asyncio
+import sys
 from typing import AsyncIterator, Dict, List
 
 from prompt_toolkit import PromptSession
 from prompt_toolkit.formatted_text import HTML
 
+from .agents import AGENT_MAP
 from .config import logger
 from .llm import LLM, loop
-from .tools import edit_file, execute_bash, read_file
 
 # NOTE: multiline=False is important (https://github.com/prompt-toolkit/python-prompt-toolkit/issues/1894
 session = PromptSession(multiline=False)
@@ -40,4 +41,5 @@ async def chat(llm: LLM) -> None:
 
 
 if __name__ == "__main__":
-    asyncio.run(chat(LLM(tools=[read_file, edit_file, execute_bash])))
+    agent_name = sys.argv[1] if len(sys.argv) > 1 else "code"
+    asyncio.run(chat(AGENT_MAP[agent_name]()))
