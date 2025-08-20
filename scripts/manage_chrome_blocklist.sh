@@ -57,8 +57,13 @@ add_url() {
 # Remove a URL from blocklist
 remove_url() {
   DOMAIN="$1"
-  sed -i '' "/https:\/\/www\.$DOMAIN/d" "$BLOCKLIST_FILE"
-  sed -i '' "/<string>$DOMAIN<\/string>/d" "$BLOCKLIST_FILE"
+  # Escape special characters for sed, including forward slashes
+  ESCAPED_DOMAIN=$(printf '%s\n' "$DOMAIN" | sed 's/[[\.*^$()+?{|\/]/\\&/g')
+  
+  # Remove entries containing the domain (handles paths like youtube.com/shorts)
+  sed -i '' "/<string>.*$ESCAPED_DOMAIN.*<\/string>/d" "$BLOCKLIST_FILE"
+  sed -i '' "/https:\/\/www\.$ESCAPED_DOMAIN/d" "$BLOCKLIST_FILE"
+  
   echo "$DOMAIN removed from blocklist."
 }
 

@@ -4,12 +4,12 @@
 <dict>
   <key>URLBlocklist</key>
   <array>
-    <string>https://www.youtube.com/shorts</string>
-    <string>youtube.com/shorts</string>
-    <string>https://www.youtube.com/shorts/</string>
-    <string>youtube.com/shorts/</string>
     <string>https://www.tiktok.com</string>
     <string>tiktok.com</string>
+    <string>https://www.linkedin.com</string>
+    <string>linkedin.com</string>
+    <string>https://www.instagram.com</string>
+    <string>instagram.com</string>
   </array>
 </dict>
 </plist>
